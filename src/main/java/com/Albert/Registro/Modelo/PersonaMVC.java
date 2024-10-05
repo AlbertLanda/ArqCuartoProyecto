@@ -4,13 +4,15 @@
  */
 package com.Albert.Registro.Modelo;
 
+import java.io.Serializable;
 import java.util.Date;
 
 /**
  *
  * @author LENOVO
  */
-public class PersonaMVC {
+public class PersonaMVC implements Serializable {
+
     private String nombre;
     private int edad;
     private Date fechaNacimiento;
@@ -69,4 +71,6 @@ public class PersonaMVC {
     public String toString() {
         return "PersonaMVC{" + "nombre=" + nombre + ", edad=" + edad + ", fechaNacimiento=" + fechaNacimiento + ", direccion=" + direccion + ", telefono=" + telefono + '}';
     }
+
+    private static final long serialVersionUID = 1L;
 }

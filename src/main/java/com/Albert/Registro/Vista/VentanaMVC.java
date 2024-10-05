@@ -4,7 +4,7 @@
  */
 package com.Albert.Registro.Vista;
 
-import com.formdev.flatlaf.FlatLightLaf;
+import com.Albert.Registro.Controlador.PersonaController;
 import com.toedter.calendar.JDateChooser;
 import com.Albert.Registro.Modelo.PersonaMVC;
 import com.formdev.flatlaf.FlatDarculaLaf;
@@ -23,14 +23,13 @@ import javax.swing.table.DefaultTableModel;
  */
 public class VentanaMVC extends javax.swing.JFrame {
 
-    /**
-     * Creates new form Ventana
-     */
+    private List<PersonaMVC> personas = new ArrayList<>();
+    PersonaController controlador;
+
     public VentanaMVC() {
         initComponents();
+        controlador = new PersonaController(this);
     }
-
-    private List<PersonaMVC> personas = new ArrayList<>();
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -59,6 +58,8 @@ public class VentanaMVC extends javax.swing.JFrame {
         btnBorrar = new javax.swing.JButton();
         txtBuscar = new javax.swing.JTextField();
         jLabel6 = new javax.swing.JLabel();
+        btnGuardar = new javax.swing.JButton();
+        btnLeer = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -98,10 +99,7 @@ public class VentanaMVC extends javax.swing.JFrame {
 
         tablaPersonas.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null},
-                {null, null, null, null, null},
-                {null, null, null, null, null},
-                {null, null, null, null, null}
+
             },
             new String [] {
                 "Nombre", "Edad", "Fecha de Nacimiento", "Direccion", "Telefono"
@@ -128,6 +126,20 @@ public class VentanaMVC extends javax.swing.JFrame {
         });
 
         jLabel6.setText("BUSCAR :");
+
+        btnGuardar.setText("Guardar");
+        btnGuardar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnGuardarActionPerformed(evt);
+            }
+        });
+
+        btnLeer.setText("Leer");
+        btnLeer.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLeerActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -171,6 +183,12 @@ public class VentanaMVC extends javax.swing.JFrame {
                         .addGap(18, 18, 18)
                         .addComponent(btnBorrar)))
                 .addGap(103, 103, 103))
+            .addGroup(layout.createSequentialGroup()
+                .addGap(217, 217, 217)
+                .addComponent(btnGuardar)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btnLeer)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -207,7 +225,11 @@ public class VentanaMVC extends javax.swing.JFrame {
                     .addComponent(jLabel6))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 251, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(49, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnGuardar)
+                    .addComponent(btnLeer))
+                .addContainerGap(14, Short.MAX_VALUE))
         );
 
         pack();
@@ -216,22 +238,7 @@ public class VentanaMVC extends javax.swing.JFrame {
 
 
     private void btnAgregarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAgregarActionPerformed
-        // TODO add your handling code here:
-        String nombre = txtNombre.getText();
-        int edad = Integer.parseInt(txtEdad.getText());
-        Date fechaNacimiento = datechooserFecha.getDate();
-        String direccion = txtDireccion.getText();
-        String telefono = txtTelefono.getText();
-
-        // Validar campos
-        if (nombre.isEmpty() || direccion.isEmpty() || telefono.isEmpty() || edad <= 0 || fechaNacimiento == null) {
-            JOptionPane.showMessageDialog(this, "Por favor, complete todos los campos correctamente.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        // Agrega el objeto persona a la lista (usa tu lógica)
-        PersonaMVC persona = new PersonaMVC(nombre, edad, fechaNacimiento, direccion, telefono);
-        personas.add(persona);
-        actualizarDisplay();
+        controlador.agregarPersona();
     }//GEN-LAST:event_btnAgregarActionPerformed
 
     private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarActionPerformed
@@ -315,6 +322,14 @@ public class VentanaMVC extends javax.swing.JFrame {
         filtrarPersonas(textoBusqueda);
     }//GEN-LAST:event_txtBuscarKeyReleased
 
+    private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarActionPerformed
+        controlador.guardarDatos();
+    }//GEN-LAST:event_btnGuardarActionPerformed
+
+    private void btnLeerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLeerActionPerformed
+        controlador.leerDatos();
+    }//GEN-LAST:event_btnLeerActionPerformed
+
     private void actualizarDisplay() {
         DefaultTableModel model = (DefaultTableModel) tablaPersonas.getModel();
 
@@ -395,6 +410,23 @@ public class VentanaMVC extends javax.swing.JFrame {
         });
     }
 
+    private int calcularEdad(Date fechaNacimiento, Date fechaActual) {
+        java.util.Calendar fechaNac = java.util.Calendar.getInstance();
+        fechaNac.setTime(fechaNacimiento);
+
+        java.util.Calendar fechaAct = java.util.Calendar.getInstance();
+        fechaAct.setTime(fechaActual);
+
+        int edad = fechaAct.get(java.util.Calendar.YEAR) - fechaNac.get(java.util.Calendar.YEAR);
+
+        // Ajustar si aún no ha cumplido años este año
+        if (fechaAct.get(java.util.Calendar.DAY_OF_YEAR) < fechaNac.get(java.util.Calendar.DAY_OF_YEAR)) {
+            edad--;
+        }
+
+        return edad;
+    }
+
     public void limpiarTabla() {
         DefaultTableModel model = (DefaultTableModel) tablaPersonas.getModel();
         model.setRowCount(0); // Limpiar todas las filas de la tabla
@@ -452,11 +484,21 @@ public class VentanaMVC extends javax.swing.JFrame {
         return tablaPersonas;
     }
 
+    public JButton getBtnGuardar() {
+        return btnGuardar;
+    }
+
+    public JButton getBtnCargar() {
+        return btnLeer;
+    }
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnActualizar;
     private javax.swing.JButton btnAgregar;
     private javax.swing.JButton btnBorrar;
     private javax.swing.JButton btnEliminar;
+    private javax.swing.JButton btnGuardar;
+    private javax.swing.JButton btnLeer;
     private com.toedter.calendar.JDateChooser datechooserFecha;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
@@ -472,4 +514,5 @@ public class VentanaMVC extends javax.swing.JFrame {
     private javax.swing.JTextField txtNombre;
     private javax.swing.JTextField txtTelefono;
     // End of variables declaration//GEN-END:variables
+
 }

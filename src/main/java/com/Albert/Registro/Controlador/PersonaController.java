@@ -6,10 +6,13 @@ package com.Albert.Registro.Controlador;
 
 import com.Albert.Registro.Modelo.PersonaMVC;
 import com.Albert.Registro.Vista.VentanaMVC;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import javax.swing.JOptionPane;
@@ -30,28 +33,54 @@ public class PersonaController {
     }
 
     private void iniciarEventos() {
-        vista.getBtnAgregar().addActionListener(evt -> agregarPersona());
         vista.getBtnEliminar().addActionListener(evt -> eliminarPersona());
         vista.getBtnActualizar().addActionListener(evt -> actualizarPersona());
         vista.getBtnBorrar().addActionListener(evt -> borrarTodo());
-        vista.getDatechooserFecha().addPropertyChangeListener("date", evt -> calcularEdad());
+        vista.getDatechooserFecha().addPropertyChangeListener("date", evt -> {
+            Date fechaSeleccionada = (Date) evt.getNewValue();
+            if (fechaSeleccionada != null) {
+                int edad = calcularEdad(fechaSeleccionada);
+                vista.getTxtEdad().setText(String.valueOf(edad));
+            }
+        });
     }
 
-    private void agregarPersona() {
+    public void agregarPersona() {
         String nombre = vista.getTxtNombre().getText();
-        int edad = Integer.parseInt(vista.getTxtEdad().getText());
-        Date fechaNacimiento = vista.getDatechooserFecha().getDate();
+        Date fechaNacimiento = vista.getDatechooserFecha().getDate();  // Asegurarte de que no sea null
         String direccion = vista.getTxtDireccion().getText();
         String telefono = vista.getTxtTelefono().getText();
 
-        if (nombre.isEmpty() || direccion.isEmpty() || telefono.isEmpty() || edad <= 0 || fechaNacimiento == null) {
-            JOptionPane.showMessageDialog(vista, "Por favor, complete todos los campos correctamente.", "Error", JOptionPane.ERROR_MESSAGE);
+        // Validar primero si la fecha de nacimiento es nula antes de calcular la edad
+        if (fechaNacimiento == null) {
+            JOptionPane.showMessageDialog(vista, "Por favor, selecciona una fecha de nacimiento.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
+        // Calcular la edad
+        int edad = calcularEdad(fechaNacimiento);
+
+        // Validar la edad calculada
+        if (edad < 0) {
+            JOptionPane.showMessageDialog(vista, "La fecha de nacimiento no puede ser mayor que la fecha actual.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Validar que los demás campos no estén vacíos
+        if (nombre.isEmpty() || direccion.isEmpty() || telefono.isEmpty()) {
+            JOptionPane.showMessageDialog(vista, "Por favor, rellena todos los campos.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Crear el objeto Persona y agregarlo a la lista
         PersonaMVC persona = new PersonaMVC(nombre, edad, fechaNacimiento, direccion, telefono);
         personas.add(persona);
+
+        // Actualizar la visualización (por ejemplo, actualizar la tabla)
         actualizarDisplay();
+
+        // Limpiar los campos después de agregar
+        limpiarCampos();
     }
 
     public void eliminarPersona() {
@@ -91,26 +120,15 @@ public class PersonaController {
         actualizarDisplay();
     }
 
-    private void calcularEdad() {
-        Date fechaNacimiento = vista.getDatechooserFecha().getDate();
-        if (fechaNacimiento != null) {
-            // Obtener la fecha actual
-            Date fechaActual = new Date();
-
-            // Calcular la edad
-            int edad = calcularEdad(fechaNacimiento, fechaActual);
-
-            // Mostrar la edad en el campo txtEdad
-            vista.getTxtEdad().setText(String.valueOf(edad));
+    private int calcularEdad(Date fechaNacimiento) {
+        if (fechaNacimiento == null) {
+            return -1; // Maneja el caso donde la fecha de nacimiento es nula
         }
-    }
 
-    private int calcularEdad(Date fechaNacimiento, Date fechaActual) {
         java.util.Calendar fechaNac = java.util.Calendar.getInstance();
         fechaNac.setTime(fechaNacimiento);
 
-        java.util.Calendar fechaAct = java.util.Calendar.getInstance();
-        fechaAct.setTime(fechaActual);
+        java.util.Calendar fechaAct = java.util.Calendar.getInstance(); // Obtén la fecha actual
 
         int edad = fechaAct.get(java.util.Calendar.YEAR) - fechaNac.get(java.util.Calendar.YEAR);
 
@@ -128,5 +146,57 @@ public class PersonaController {
             vista.agregarFilaTabla(persona); // Método que deberías crear en la vista para agregar filas a la tabla
         }
         vista.limpiar(); // Llamar al método que limpia los campos de entrada
+    }
+
+    public void guardarDatos() {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("personas.txt"))) {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy"); // Formato de fecha
+            for (PersonaMVC persona : personas) {
+                writer.write(persona.getNombre() + "," + persona.getEdad() + "," + sdf.format(persona.getFechaNacimiento()) + "," + persona.getDireccion() + "," + persona.getTelefono());
+                writer.newLine();
+            }
+            JOptionPane.showMessageDialog(vista, "Datos guardados correctamente.");
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(vista, "Error al guardar los datos.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    public void leerDatos() {
+        personas.clear();
+        try (BufferedReader reader = new BufferedReader(new FileReader("personas.txt"))) {
+            String linea;
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy"); // Usar el mismo formato aquí
+            while ((linea = reader.readLine()) != null) {
+                String[] datos = linea.split(",");
+                if (datos.length < 5) {
+                    JOptionPane.showMessageDialog(vista, "Formato de datos incorrecto en la línea: " + linea, "Error", JOptionPane.ERROR_MESSAGE);
+                    continue; // Salta la línea si no tiene suficientes datos
+                }
+                String nombre = datos[0].trim();
+                int edad = Integer.parseInt(datos[1].trim());
+                // Cambiar aquí para usar el formato correcto
+                Date fechaNacimiento = sdf.parse(datos[2].trim());
+                String direccion = datos[3].trim();
+                String telefono = datos[4].trim();
+                PersonaMVC persona = new PersonaMVC(nombre, edad, fechaNacimiento, direccion, telefono);
+                personas.add(persona);
+            }
+            JOptionPane.showMessageDialog(vista, "Datos cargados correctamente.");
+            actualizarDisplay();
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(vista, "Error al cargar los datos: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (ParseException e) {
+            JOptionPane.showMessageDialog(vista, "Error al parsear la fecha: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(vista, "Error de formato en los datos numéricos: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void limpiarCampos() {
+        vista.getTxtNombre().setText("");
+        vista.getDatechooserFecha().setDate(null); // Limpiar el campo de fecha
+        vista.getTxtDireccion().setText("");
+        vista.getTxtTelefono().setText("");
+        vista.getTxtEdad().setText(""); // Si hay un campo para mostrar la edad, también lo limpiamos
     }
 }
